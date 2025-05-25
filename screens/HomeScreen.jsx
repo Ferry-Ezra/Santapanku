@@ -1,87 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import FoodCard from '../components/FoodCard';
 
-const categories = ['Popular', 'Food', 'Drink'];
+export default function HomeScreen({ navigation }) {
+  const [data, setData] = useState([
+    {
+      id: '1',
+      title: 'Nasi Goreng',
+      category: 'Food',
+      image: require('../assets/images/makanan1.png'),
+      date: '2024-05-25',
+      price: 25000,
+    },
+    {
+      id: '2',
+      title: 'Es Teh Manis',
+      category: 'Drink',
+      image: require('../assets/images/makanan2.png'),
+      date: '2024-05-26',
+      price: 10000,
+    },
+  ]);
 
-const data = [
-  {
-    id: '1',
-    category: 'Food',
-    title: 'Jelajah Kuliner Indonesia : Nasi Goreng',
-    date: 'May 25, 2025',
-    image: require('../assets/nasigoreng.png'),
-  },
-  {
-    id: '2',
-    category: 'Food',
-    title: 'Petualangan Rasa: Ayam Goreng',
-    date: 'May 20, 2025',
-    image: require('../assets/ayamgoreng.png'),
-  },
-  {
-    id: '3',
-    category: 'Drink',
-    title: 'Makanan Tradisional yang enak : Soto Ayam',
-    date: 'May 18, 2025',
-    image: require('../assets/sotoayam.png'),
-  },
-];
+  const addNewFood = (newFood) => {
+    setData(prev => [newFood, ...prev]);
+  };
 
-export default function HomeScreen() {
-  const [selectedCategory, setSelectedCategory] = useState('Popular');
-  const [search, setSearch] = useState('');
-  const [filteredData, setFilteredData] = useState(data);
+  const updateFood = (updatedFood) => {
+    setData(prev => prev.map(item => (item.id === updatedFood.id ? updatedFood : item)));
+  };
 
-  // Filter data saat category atau search berubah
-  useEffect(() => {
-    let filtered = data;
+  const deleteFood = (id) => {
+    setData(prev => prev.filter(item => item.id !== id));
+  };
 
-    if (selectedCategory !== 'Popular') {
-      filtered = filtered.filter(item => item.category === selectedCategory);
-    }
-
-    if (search.trim() !== '') {
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    setFilteredData(filtered);
-  }, [selectedCategory, search]);
+  const renderItem = ({ item }) => (
+    <FoodCard
+      {...item}
+      onEdit={() => navigation.navigate('Form', { foodData: item, onUpdate: updateFood })}
+      onDelete={() => deleteFood(item.id)}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>Santapanku</Text>
-
-      <TextInput
-        placeholder="Cari makanan favoritmu..."
-        style={styles.searchInput}
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
-        {categories.map(cat => (
-          <TouchableOpacity key={cat} onPress={() => setSelectedCategory(cat)}>
-            <Text style={[styles.tabText, selectedCategory === cat && styles.activeTab]}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('Form', { onAdd: addNewFood })}
+      >
+        <Text style={styles.addButtonText}>+ Tambah Makanan</Text>
+      </TouchableOpacity>
 
       <FlatList
-        data={filteredData}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <FoodCard
-            image={item.image}
-            category={item.category}
-            title={item.title}
-            date={item.date}
-          />
-        )}
+        data={data}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
     </View>
@@ -89,26 +62,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 40 },
-  logo: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
-  searchInput: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  tabContainer: { flexDirection: 'row', marginBottom: 16 },
-  tabText: {
-    marginRight: 16,
-    fontSize: 16,
-    color: '#888',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
-  },
-  activeTab: {
+  container: { flex: 1, padding: 20 },
+  addButton: {
     backgroundColor: '#4e7fff',
-    color: '#fff',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: 'center',
   },
+  addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
 });
