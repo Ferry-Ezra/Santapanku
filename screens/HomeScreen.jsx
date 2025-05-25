@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import FoodCard from '../components/FoodCard';
 
-const categories = ['Favorit ', 'Menu Terbaru', 'Makanan ', 'Minuman '];
+const categories = ['Popular', 'Food', 'Drink'];
 
 const data = [
   {
     id: '1',
-    category: 'Makanan',
+    category: 'Food',
     title: 'Jelajah Kuliner Indonesia',
     date: 'May 25, 2025',
     image: require('../assets/nasigoreng.png'),
   },
   {
     id: '2',
-    category: 'Makanan',
+    category: 'Food',
     title: 'Petualangan Rasa: Nasi Goreng',
     date: 'May 20, 2025',
     image: require('../assets/ayamgoreng.png'),
   },
   {
     id: '3',
-    category: 'Makanan',
+    category: 'Drink',
     title: 'Makanan Tradisional yang enak : Soto Ayam',
     date: 'May 18, 2025',
     image: require('../assets/sotoayam.png'),
@@ -30,17 +31,24 @@ const data = [
 export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('Popular');
   const [search, setSearch] = useState('');
+  const [filteredData, setFilteredData] = useState(data);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <Image source={item.image} style={styles.cardImage} />
-      <View style={styles.cardContent}>
-        <Text style={styles.cardCategory}>{item.category}</Text>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardDate}>{item.date}</Text>
-      </View>
-    </View>
-  );
+  // Filter data saat category atau search berubah
+  useEffect(() => {
+    let filtered = data;
+
+    if (selectedCategory !== 'Popular') {
+      filtered = filtered.filter(item => item.category === selectedCategory);
+    }
+
+    if (search.trim() !== '') {
+      filtered = filtered.filter(item =>
+        item.title.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    setFilteredData(filtered);
+  }, [selectedCategory, search]);
 
   return (
     <View style={styles.container}>
@@ -54,7 +62,7 @@ export default function HomeScreen() {
       />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabContainer}>
-        {categories.map((cat) => (
+        {categories.map(cat => (
           <TouchableOpacity key={cat} onPress={() => setSelectedCategory(cat)}>
             <Text style={[styles.tabText, selectedCategory === cat && styles.activeTab]}>
               {cat}
@@ -64,9 +72,16 @@ export default function HomeScreen() {
       </ScrollView>
 
       <FlatList
-        data={data.filter(item => item.category.includes(selectedCategory) || selectedCategory === 'Popular')}
-        renderItem={renderItem}
+        data={filteredData}
         keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <FoodCard
+            image={item.image}
+            category={item.category}
+            title={item.title}
+            date={item.date}
+          />
+        )}
         contentContainerStyle={{ paddingBottom: 100 }}
       />
     </View>
@@ -95,34 +110,5 @@ const styles = StyleSheet.create({
   activeTab: {
     backgroundColor: '#4e7fff',
     color: '#fff',
-  },
-  card: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  cardImage: {
-    width: 100,
-    height: 100,
-  },
-  cardContent: {
-    flex: 1,
-    padding: 10,
-  },
-  cardCategory: {
-    color: '#4e7fff',
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  cardDate: {
-    color: '#999',
-    fontSize: 12,
-    marginTop: 4,
   },
 });
