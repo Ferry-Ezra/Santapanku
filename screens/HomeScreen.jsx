@@ -8,14 +8,14 @@ const data = [
   {
     id: '1',
     category: 'Food',
-    title: 'Jelajah Kuliner Indonesia',
+    title: 'Jelajah Kuliner Indonesia : Nasi Goreng',
     date: 'May 25, 2025',
     image: require('../assets/nasigoreng.png'),
   },
   {
     id: '2',
     category: 'Food',
-    title: 'Petualangan Rasa: Nasi Goreng',
+    title: 'Petualangan Rasa: Ayam Goreng',
     date: 'May 20, 2025',
     image: require('../assets/ayamgoreng.png'),
   },
