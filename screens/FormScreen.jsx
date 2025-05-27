@@ -1,5 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
+} from 'react-native';
 
 const localImages = {
   makanan1: require('../assets/images/makanan1.png'),
@@ -14,11 +22,12 @@ export default function FormScreen({ navigation, route }) {
 
   const [title, setTitle] = useState(foodData ? foodData.title : '');
   const [category, setCategory] = useState(foodData ? foodData.category : 'Food');
-  const [selectedImageKey, setSelectedImageKey] = useState(foodData ? getKeyByValue(localImages, foodData.image) || 'makanan1' : 'makanan1');
+  const [selectedImageKey, setSelectedImageKey] = useState(
+    foodData ? getKeyByValue(localImages, foodData.image) || 'makanan1' : 'makanan1'
+  );
   const [date, setDate] = useState(foodData ? foodData.date : '');
   const [price, setPrice] = useState(foodData ? String(foodData.price) : '');
 
-  // Fungsi untuk cari key berdasarkan value (require image)
   function getKeyByValue(object, value) {
     return Object.keys(object).find(key => object[key] === value);
   }
@@ -63,7 +72,9 @@ export default function FormScreen({ navigation, route }) {
             style={[styles.categoryButton, category === cat && styles.categorySelected]}
             onPress={() => setCategory(cat)}
           >
-            <Text style={category === cat ? styles.categoryTextSelected : styles.categoryText}>{cat}</Text>
+            <Text style={category === cat ? styles.categoryTextSelected : styles.categoryText}>
+              {cat}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>

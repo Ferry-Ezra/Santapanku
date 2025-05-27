@@ -35,7 +35,7 @@ export default function AppNavigator() {
         },
         tabBarActiveTintColor: '#4e7fff',
         tabBarInactiveTintColor: 'gray',
-        headerShown: false,
+        headerShown: route.name !== 'HomeStack',  
       })}
     >
       <Tab.Screen name="HomeStack" component={HomeStack} options={{ tabBarLabel: 'Beranda' }} />
@@ -44,3 +44,4 @@ export default function AppNavigator() {
     </Tab.Navigator>
   );
 }
+
