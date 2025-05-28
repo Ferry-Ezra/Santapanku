@@ -11,7 +11,13 @@ import {
   Alert,
 } from 'react-native';
 import ImagePicker from 'react-native-image-crop-picker';
-import { addDoc, collection, getFirestore, updateDoc, doc } from '@react-native-firebase/firestore';
+import {
+  addDoc,
+  collection,
+  getFirestore,
+  updateDoc,
+  doc,
+} from '@react-native-firebase/firestore';
 
 export default function FormScreen({ navigation, route }) {
   const foodData = route.params?.foodData;
@@ -74,7 +80,7 @@ export default function FormScreen({ navigation, route }) {
 
   const submitHandler = async () => {
     if (!title || !price || !imageUrl) {
-      alert('Mohon isi semua data termasuk gambar');
+      Alert.alert('Peringatan', 'Mohon isi semua data termasuk gambar');
       return;
     }
 
@@ -104,11 +110,16 @@ export default function FormScreen({ navigation, route }) {
       }
 
       setLoading(false);
-      navigation.goBack();
+      Alert.alert('Sukses', 'Data berhasil disimpan', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     } catch (error) {
       setLoading(false);
       console.error('Gagal menyimpan:', error.message);
-      Alert.alert('Terjadi kesalahan saat menyimpan data');
+      Alert.alert('Error', 'Terjadi kesalahan saat menyimpan data');
     }
   };
 
@@ -127,10 +138,19 @@ export default function FormScreen({ navigation, route }) {
         {['Food', 'Drink'].map((cat) => (
           <TouchableOpacity
             key={cat}
-            style={[styles.categoryButton, category === cat && styles.categorySelected]}
+            style={[
+              styles.categoryButton,
+              category === cat && styles.categorySelected,
+            ]}
             onPress={() => setCategory(cat)}
           >
-            <Text style={category === cat ? styles.categoryTextSelected : styles.categoryText}>
+            <Text
+              style={
+                category === cat
+                  ? styles.categoryTextSelected
+                  : styles.categoryText
+              }
+            >
               {cat}
             </Text>
           </TouchableOpacity>
@@ -164,7 +184,6 @@ export default function FormScreen({ navigation, route }) {
     </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     padding: 20,

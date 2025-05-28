@@ -39,7 +39,7 @@ export default function AppNavigator() {
       })}
     >
       <Tab.Screen name="HomeStack" component={HomeStack} options={{ tabBarLabel: 'Beranda' }} />
-      <Tab.Screen name="Order" component={OrderScreen} options={{ tabBarLabel: 'Pesanan' }} />
+      <Tab.Screen name="Order" component={OrderScreen} options={{ tabBarLabel: 'Notifikasi' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: 'Profil' }} />
     </Tab.Navigator>
   );
