@@ -7,9 +7,11 @@ import {
   StyleSheet,
   ScrollView,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-
-const API_URL = 'https://6835be02cd78db2058c2f3cb.mockapi.io/api/dataMakanan';
+import ImagePicker from 'react-native-image-crop-picker';
+import { addDoc, collection, getFirestore, updateDoc, doc } from '@react-native-firebase/firestore';
 
 export default function FormScreen({ navigation, route }) {
   const foodData = route.params?.foodData;
@@ -20,6 +22,7 @@ export default function FormScreen({ navigation, route }) {
   const [category, setCategory] = useState(foodData?.category || 'Food');
   const [imageUrl, setImageUrl] = useState(foodData?.image || '');
   const [price, setPrice] = useState(foodData?.price ? String(foodData.price) : '');
+  const [loading, setLoading] = useState(false);
 
   const getTodayDate = () => {
     const today = new Date();
@@ -27,6 +30,46 @@ export default function FormScreen({ navigation, route }) {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const handleImagePick = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        width: 1920,
+        height: 1080,
+        cropping: true,
+      });
+
+      let filename = image.path.substring(image.path.lastIndexOf('/') + 1);
+      const extension = filename.split('.').pop();
+      const name = filename.split('.').slice(0, -1).join('.');
+      filename = name + Date.now() + '.' + extension;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: image.path,
+        type: `image/${extension}`,
+        name: filename,
+      });
+
+      setLoading(true);
+      const res = await fetch('https://backend-file-praktikum.vercel.app/upload/', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.status !== 200) {
+        throw new Error('Upload gagal');
+      }
+
+      const { url } = await res.json();
+      setImageUrl(url);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.log('Image upload error:', error.message);
+      Alert.alert('Gagal upload gambar', error.message);
+    }
   };
 
   const submitHandler = async () => {
@@ -42,31 +85,30 @@ export default function FormScreen({ navigation, route }) {
       date: foodData?.date || getTodayDate(),
       price: Number(price),
       description: `${title} adalah makanan kategori ${category}`,
+      createdAt: new Date(),
     };
 
+    const db = getFirestore();
+    const menuRef = collection(db, 'blog');
+
     try {
-      let response;
-      if (foodData && foodData.id && onUpdate) {
-        response = await fetch(`${API_URL}/${foodData.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        const updated = await response.json();
-        onUpdate(updated);
+      setLoading(true);
+
+      if (foodData?.id && onUpdate) {
+        const itemDoc = doc(db, 'blog', foodData.id);
+        await updateDoc(itemDoc, newItem);
+        onUpdate({ ...newItem, id: foodData.id });
       } else {
-        response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newItem),
-        });
-        const created = await response.json();
-        if (onAdd) onAdd(created);
+        const docRef = await addDoc(menuRef, newItem);
+        onAdd?.({ ...newItem, id: docRef.id });
       }
+
+      setLoading(false);
       navigation.goBack();
     } catch (error) {
+      setLoading(false);
       console.error('Gagal menyimpan:', error.message);
-      alert('Terjadi kesalahan saat menyimpan data');
+      Alert.alert('Terjadi kesalahan saat menyimpan data');
     }
   };
 
@@ -88,9 +130,7 @@ export default function FormScreen({ navigation, route }) {
             style={[styles.categoryButton, category === cat && styles.categorySelected]}
             onPress={() => setCategory(cat)}
           >
-            <Text
-              style={category === cat ? styles.categoryTextSelected : styles.categoryText}
-            >
+            <Text style={category === cat ? styles.categoryTextSelected : styles.categoryText}>
               {cat}
             </Text>
           </TouchableOpacity>
@@ -100,81 +140,94 @@ export default function FormScreen({ navigation, route }) {
       <Text style={styles.label}>Harga</Text>
       <TextInput
         style={styles.input}
+        keyboardType="numeric"
         value={price}
         onChangeText={setPrice}
-        keyboardType="numeric"
         placeholder="Masukkan harga"
       />
 
-      <Text style={styles.label}>URL Gambar</Text>
-      <TextInput
-        style={styles.input}
-        value={imageUrl}
-        onChangeText={setImageUrl}
-        placeholder="Masukkan URL gambar"
-      />
-
-      {imageUrl !== '' && (
-        <Image
-          source={{ uri: imageUrl }}
-          style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-          resizeMode="cover"
-        />
-      )}
-
-      <TouchableOpacity style={styles.button} onPress={submitHandler}>
-        <Text style={styles.buttonText}>{foodData ? 'Update' : 'Tambah'} Makanan</Text>
+      <Text style={styles.label}>Gambar</Text>
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.imagePreview} />
+      ) : null}
+      <TouchableOpacity style={styles.imageButton} onPress={handleImagePick}>
+        <Text style={styles.imageButtonText}>Pilih Gambar</Text>
       </TouchableOpacity>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 20 }} />
+      ) : (
+        <TouchableOpacity style={styles.submitButton} onPress={submitHandler}>
+          <Text style={styles.submitButtonText}>Simpan</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: 20,
   },
   label: {
-    fontSize: 16,
-    marginTop: 12,
+    marginTop: 10,
     fontWeight: 'bold',
+    fontSize: 16,
   },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
+    borderRadius: 6,
     padding: 10,
-    borderRadius: 8,
-    marginTop: 8,
+    marginTop: 5,
   },
   categoryContainer: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 8,
+    marginTop: 10,
   },
   categoryButton: {
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
   },
   categorySelected: {
-    backgroundColor: 'blue',
+    backgroundColor: '#4e7fff',
+    borderColor: '#4e7fff',
   },
   categoryText: {
-    color: '#000',
+    color: '#333',
   },
   categoryTextSelected: {
     color: '#fff',
-    fontWeight: 'bold',
   },
-  button: {
-    backgroundColor: 'blue',
-    padding: 16,
-    marginTop: 24,
-    borderRadius: 10,
+  imageButton: {
+    backgroundColor: '#4e7fff',
+    padding: 10,
+    borderRadius: 6,
     alignItems: 'center',
+    marginTop: 10,
   },
-  buttonText: {
+  imageButtonText: {
     color: '#fff',
-    fontSize: 16,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    marginTop: 10,
+    borderRadius: 6,
+  },
+  submitButton: {
+    backgroundColor: 'blue',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

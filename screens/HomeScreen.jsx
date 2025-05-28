@@ -10,8 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-
-const API_URL = 'https://6835be02cd78db2058c2f3cb.mockapi.io/api/dataMakanan';
+import firestore from '@react-native-firebase/firestore';
 
 const categories = ['Popular', 'Food', 'Drink'];
 
@@ -25,9 +24,16 @@ export default function HomeScreen({ navigation }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_URL);
-      const json = await res.json();
-      setData(json);
+      const snapshot = await firestore()
+        .collection('menu')
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const fetchedData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setData(fetchedData);
     } catch (error) {
       alert('Gagal load data: ' + error.message);
     }
@@ -56,7 +62,9 @@ export default function HomeScreen({ navigation }) {
   };
 
   const onUpdate = (updatedItem) => {
-    setData(prev => prev.map(item => (item.id === updatedItem.id ? updatedItem : item)));
+    setData(prev =>
+      prev.map(item => (item.id === updatedItem.id ? updatedItem : item))
+    );
   };
 
   const onDelete = (id) => {
@@ -71,7 +79,7 @@ export default function HomeScreen({ navigation }) {
           onPress: async () => {
             try {
               setLoading(true);
-              await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+              await firestore().collection('blog').doc(id).delete();
               setData(prev => prev.filter(item => item.id !== id));
             } catch (error) {
               alert('Gagal hapus data: ' + error.message);
@@ -89,7 +97,7 @@ export default function HomeScreen({ navigation }) {
       <View style={{ flex: 1, paddingLeft: 10 }}>
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.categoryText}>{item.category}</Text>
-        <Text style={styles.price}>Rp {item.price.toLocaleString()}</Text>
+        <Text style={styles.price}>Rp {item.price?.toLocaleString()}</Text>
       </View>
 
       <View style={styles.actionButtons}>
@@ -208,52 +216,63 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   activeTabText: {
-    color: 'white',
+    color: '#fff',
   },
 
   card: {
     flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
-    padding: 10,
     marginBottom: 12,
-    alignItems: 'center',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    backgroundColor: '#f9f9f9',
   },
+
   image: {
     width: 80,
     height: 80,
-    borderRadius: 12,
+    borderRadius: 8,
   },
+
   title: {
     fontWeight: 'bold',
     fontSize: 16,
   },
+
   categoryText: {
-    color: 'gray',
     fontSize: 14,
+    color: '#666',
   },
+
   price: {
-    marginTop: 6,
+    color: 'BLACK ',
+    marginTop: 4,
     fontWeight: '600',
-    color: 'black',
   },
+
   actionButtons: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginLeft: 10,
   },
+
   button: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginLeft: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
+
   editButton: {
     backgroundColor: 'orange',
   },
+
   deleteButton: {
     backgroundColor: 'red',
   },
+
   buttonText: {
     color: 'white',
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });

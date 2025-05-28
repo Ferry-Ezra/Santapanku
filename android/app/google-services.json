@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "126081315588",
+    "project_id": "santapankuapp",
+    "storage_bucket": "santapankuapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:126081315588:android:54ecf8abf6ebf024385651",
+        "android_client_info": {
+          "package_name": "com.santapanku"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8qIzf0ztSI8QE_gKzl3yKflPLP3ga-3c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
