@@ -9,49 +9,65 @@ import {
   Image,
 } from 'react-native';
 
-const localImages = {
-  makanan1: require('../assets/images/makanan1.png'),
-  makanan2: require('../assets/images/makanan2.png'),
-  makanan3: require('../assets/images/makanan3.png'),
-};
+const API_URL = 'https://6835be02cd78db2058c2f3cb.mockapi.io/api/dataMakanan';
 
 export default function FormScreen({ navigation, route }) {
   const foodData = route.params?.foodData;
   const onAdd = route.params?.onAdd;
   const onUpdate = route.params?.onUpdate;
 
-  const [title, setTitle] = useState(foodData ? foodData.title : '');
-  const [category, setCategory] = useState(foodData ? foodData.category : 'Food');
-  const [selectedImageKey, setSelectedImageKey] = useState(
-    foodData ? getKeyByValue(localImages, foodData.image) || 'makanan1' : 'makanan1'
-  );
-  const [date, setDate] = useState(foodData ? foodData.date : '');
-  const [price, setPrice] = useState(foodData ? String(foodData.price) : '');
+  const [title, setTitle] = useState(foodData?.title || '');
+  const [category, setCategory] = useState(foodData?.category || 'Food');
+  const [imageUrl, setImageUrl] = useState(foodData?.image || '');
+  const [price, setPrice] = useState(foodData?.price ? String(foodData.price) : '');
 
-  function getKeyByValue(object, value) {
-    return Object.keys(object).find(key => object[key] === value);
-  }
+  const getTodayDate = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
-  const submitHandler = () => {
-    if (!title || !date || !price) {
-      alert('Mohon isi semua data termasuk harga');
+  const submitHandler = async () => {
+    if (!title || !price || !imageUrl) {
+      alert('Mohon isi semua data termasuk gambar');
       return;
     }
+
     const newItem = {
-      id: foodData ? foodData.id : Math.random().toString(),
       title,
       category,
-      image: localImages[selectedImageKey],
-      date,
+      image: imageUrl,
+      date: foodData?.date || getTodayDate(),
       price: Number(price),
+      description: `${title} adalah makanan kategori ${category}`,
     };
 
-    if (foodData && onUpdate) {
-      onUpdate(newItem);
-    } else if (onAdd) {
-      onAdd(newItem);
+    try {
+      let response;
+      if (foodData && foodData.id && onUpdate) {
+        response = await fetch(`${API_URL}/${foodData.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newItem),
+        });
+        const updated = await response.json();
+        onUpdate(updated);
+      } else {
+        response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newItem),
+        });
+        const created = await response.json();
+        if (onAdd) onAdd(created);
+      }
+      navigation.goBack();
+    } catch (error) {
+      console.error('Gagal menyimpan:', error.message);
+      alert('Terjadi kesalahan saat menyimpan data');
     }
-    navigation.goBack();
   };
 
   return (
@@ -66,41 +82,22 @@ export default function FormScreen({ navigation, route }) {
 
       <Text style={styles.label}>Kategori</Text>
       <View style={styles.categoryContainer}>
-        {['Food', 'Drink'].map(cat => (
+        {['Food', 'Drink'].map((cat) => (
           <TouchableOpacity
             key={cat}
             style={[styles.categoryButton, category === cat && styles.categorySelected]}
             onPress={() => setCategory(cat)}
           >
-            <Text style={category === cat ? styles.categoryTextSelected : styles.categoryText}>
+            <Text
+              style={category === cat ? styles.categoryTextSelected : styles.categoryText}
+            >
               {cat}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <Text style={styles.label}>Pilih Gambar</Text>
-      <View style={styles.imagePickerContainer}>
-        {Object.keys(localImages).map(key => (
-          <TouchableOpacity
-            key={key}
-            onPress={() => setSelectedImageKey(key)}
-            style={selectedImageKey === key ? styles.imageSelected : null}
-          >
-            <Image source={localImages[key]} style={styles.imageThumb} />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Tanggal</Text>
-      <TextInput
-        style={styles.input}
-        value={date}
-        onChangeText={setDate}
-        placeholder="YYYY-MM-DD"
-      />
-
-      <Text style={styles.label}>Harga (Rp)</Text>
+      <Text style={styles.label}>Harga</Text>
       <TextInput
         style={styles.input}
         value={price}
@@ -109,64 +106,75 @@ export default function FormScreen({ navigation, route }) {
         placeholder="Masukkan harga"
       />
 
-      <TouchableOpacity style={styles.submitButton} onPress={submitHandler}>
-        <Text style={styles.submitText}>{foodData ? 'Update Data' : 'Tambah Data'}</Text>
+      <Text style={styles.label}>URL Gambar</Text>
+      <TextInput
+        style={styles.input}
+        value={imageUrl}
+        onChangeText={setImageUrl}
+        placeholder="Masukkan URL gambar"
+      />
+
+      {imageUrl !== '' && (
+        <Image
+          source={{ uri: imageUrl }}
+          style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+          resizeMode="cover"
+        />
+      )}
+
+      <TouchableOpacity style={styles.button} onPress={submitHandler}>
+        <Text style={styles.buttonText}>{foodData ? 'Update' : 'Tambah'} Makanan</Text>
       </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-  label: { marginTop: 20, fontWeight: 'bold', fontSize: 16 },
+  container: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  label: {
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: 'bold',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    borderRadius: 6,
-    marginTop: 6,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  categoryContainer: { flexDirection: 'row', marginTop: 10 },
+  categoryContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
   categoryButton: {
     padding: 10,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#4e7fff',
-    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
   },
   categorySelected: {
-    backgroundColor: '#4e7fff',
+    backgroundColor: 'blue',
   },
   categoryText: {
-    color: '#4e7fff',
+    color: '#000',
   },
   categoryTextSelected: {
-    color: 'white',
+    color: '#fff',
+    fontWeight: 'bold',
   },
-  imagePickerContainer: {
-    flexDirection: 'row',
-    marginTop: 10,
-  },
-  imageThumb: {
-    width: 70,
-    height: 70,
-    marginRight: 10,
-    borderRadius: 6,
-  },
-  imageSelected: {
-    borderWidth: 2,
-    borderColor: '#4e7fff',
-    borderRadius: 8,
-  },
-  submitButton: {
-    marginTop: 30,
-    backgroundColor: '#4e7fff',
-    padding: 15,
-    borderRadius: 8,
+  button: {
+    backgroundColor: 'blue',
+    padding: 16,
+    marginTop: 24,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  submitText: {
-    color: 'white',
-    fontWeight: 'bold',
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });

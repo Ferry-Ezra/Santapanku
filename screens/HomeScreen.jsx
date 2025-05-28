@@ -1,69 +1,47 @@
-// HomeScreen.jsx (full simplified, fokus ke animasi)
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  StyleSheet,
   TouchableOpacity,
-  Animated,
+  StyleSheet,
   FlatList,
+  TextInput,
+  Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import FoodCard from '../components/FoodCard';
+
+const API_URL = 'https://6835be02cd78db2058c2f3cb.mockapi.io/api/dataMakanan';
 
 const categories = ['Popular', 'Food', 'Drink'];
 
 export default function HomeScreen({ navigation }) {
-  const [selectedCategory, setSelectedCategory] = useState('Popular');
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [category, setCategory] = useState('Popular');
   const [search, setSearch] = useState('');
-  const [data, setData] = useState([
-    {
-      id: '1',
-      title: 'Nasi Goreng',
-      category: 'Food',
-      image: require('../assets/images/makanan1.png'),
-      date: '2024-05-25',
-      price: 25000,
-    },
-    {
-      id: '2',
-      title: 'Es Teh Manis',
-      category: 'Drink',
-      image: require('../assets/images/makanan2.png'),
-      date: '2024-05-26',
-      price: 10000,
-    },
-  ]);
-  const [filteredData, setFilteredData] = useState(data);
+  const [loading, setLoading] = useState(true);
 
-  // Tombol tambah animasi
-  const addBtnScale = useRef(new Animated.Value(1)).current;
-  const addBtnOpacity = useRef(new Animated.Value(1)).current;
-
-  // Fungsi animasi tombol tekan
-  const onPressInAdd = () => {
-    Animated.parallel([
-      Animated.spring(addBtnScale, { toValue: 0.95, useNativeDriver: true }),
-      Animated.timing(addBtnOpacity, { toValue: 0.7, duration: 100, useNativeDriver: true }),
-    ]).start();
-  };
-  const onPressOutAdd = () => {
-    Animated.parallel([
-      Animated.spring(addBtnScale, { toValue: 1, useNativeDriver: true }),
-      Animated.timing(addBtnOpacity, { toValue: 1, duration: 100, useNativeDriver: true }),
-    ]).start();
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL);
+      const json = await res.json();
+      setData(json);
+    } catch (error) {
+      alert('Gagal load data: ' + error.message);
+    }
+    setLoading(false);
   };
 
-  // Tambah makanan baru
-  const addNewFood = (newFood) => {
-    setData(prev => [newFood, ...prev]);
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  // Update filteredData saat data/filters berubah
   useEffect(() => {
     let filtered = data;
-    if (selectedCategory !== 'Popular') {
-      filtered = filtered.filter(item => item.category === selectedCategory);
+    if (category !== 'Popular') {
+      filtered = filtered.filter(item => item.category === category);
     }
     if (search.trim() !== '') {
       filtered = filtered.filter(item =>
@@ -71,182 +49,211 @@ export default function HomeScreen({ navigation }) {
       );
     }
     setFilteredData(filtered);
-  }, [selectedCategory, search, data]);
+  }, [data, category, search]);
 
-  // Hapus dengan animasi (trigger di FoodCard)
-  const handleDelete = (id) => {
-    setData(prev => prev.filter(item => item.id !== id));
+  const onAdd = (newItem) => {
+    setData(prev => [newItem, ...prev]);
   };
 
-  // Render item dengan animasi muncul
-  const renderItem = ({ item, index }) => {
-    return (
-      <AnimatedFoodCard
-        key={item.id}
-        item={item}
-        index={index}
-        onDelete={() => handleDelete(item.id)}
-        onEdit={(food) => navigation.navigate('Form', { foodData: food, onUpdate: (updated) => {
-          setData(prev => prev.map(d => d.id === updated.id ? updated : d));
-        } })}
-      />
+  const onUpdate = (updatedItem) => {
+    setData(prev => prev.map(item => (item.id === updatedItem.id ? updatedItem : item)));
+  };
+
+  const onDelete = (id) => {
+    Alert.alert(
+      'Konfirmasi',
+      'Apakah anda yakin ingin menghapus?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+              setData(prev => prev.filter(item => item.id !== id));
+            } catch (error) {
+              alert('Gagal hapus data: ' + error.message);
+            }
+            setLoading(false);
+          },
+        },
+      ]
     );
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Animated.View
-          style={{
-            transform: [{ scale: addBtnScale }],
-            opacity: addBtnOpacity,
-          }}
-        >
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => navigation.navigate('Form', { onAdd: addNewFood })}
-            onPressIn={onPressInAdd}
-            onPressOut={onPressOutAdd}
-          >
-            <Text style={styles.addButtonText}>+ Tambah Makanan</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <TextInput
-          placeholder="Cari makanan favoritmu..."
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-        />
-
-        <View style={styles.tabContainer}>
-          {categories.map(cat => (
-            <TouchableOpacity key={cat} onPress={() => setSelectedCategory(cat)}>
-              <Text style={[styles.tabText, selectedCategory === cat && styles.activeTab]}>
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+  const renderItem = ({ item }) => (
+    <View style={styles.card}>
+      <Image source={{ uri: item.image }} style={styles.image} />
+      <View style={{ flex: 1, paddingLeft: 10 }}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.categoryText}>{item.category}</Text>
+        <Text style={styles.price}>Rp {item.price.toLocaleString()}</Text>
       </View>
 
-      {/* List dengan animasi */}
-      <FlatList
-        data={filteredData}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 160, paddingBottom: 100 }}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={[styles.button, styles.editButton]}
+          onPress={() =>
+            navigation.navigate('Form', {
+              foodData: item,
+              onUpdate: onUpdate,
+            })
+          }
+        >
+          <Text style={styles.buttonText}>Edit</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton]}
+          onPress={() => onDelete(item.id)}
+        >
+          <Text style={styles.buttonText}>Hapus</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="blue" />
+        <Text>Memuat data...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('Form', { onAdd })}
+      >
+        <Text style={styles.addButtonText}>+ Tambah Makanan</Text>
+      </TouchableOpacity>
+
+      <TextInput
+        placeholder="Cari makanan..."
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
       />
+
+      <View style={styles.tabContainer}>
+        {categories.map(cat => (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.tab, category === cat && styles.activeTab]}
+            onPress={() => setCategory(cat)}
+          >
+            <Text style={[styles.tabText, category === cat && styles.activeTabText]}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {filteredData.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Tidak ada data</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredData}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        />
+      )}
     </View>
   );
 }
 
-// FoodCard Animated Wrapper
-const AnimatedFoodCard = ({ item, index, onDelete, onEdit }) => {
-  const anim = useRef(new Animated.Value(0)).current;
-  const [isDeleted, setIsDeleted] = useState(false);
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 500,
-      delay: index * 100,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const handleDelete = () => {
-    // Animasi fade out dan shrink
-    Animated.timing(anim, {
-      toValue: 0,
-      duration: 400,
-      useNativeDriver: true,
-    }).start(() => {
-      setIsDeleted(true);
-      onDelete();
-    });
-  };
-
-  if (isDeleted) return null;
-
-  return (
-    <Animated.View
-      style={{
-        opacity: anim,
-        transform: [
-          {
-            translateY: anim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [20, 0],
-            }),
-          },
-          {
-            scale: anim,
-          },
-        ],
-      }}
-    >
-      <FoodCard
-        image={item.image}
-        category={item.category}
-        title={item.title}
-        date={item.date}
-        price={item.price}
-        onDelete={handleDelete}
-        onEdit={() => onEdit(item)}
-      />
-    </Animated.View>
-  );
-};
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 16,
-    zIndex: 10,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+
   addButton: {
-    backgroundColor: '#4e7fff',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: 'blue',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 12,
     alignItems: 'center',
-    marginBottom: 10,
   },
-  addButtonText: {
-    color: '#fff',
+  addButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+  searchInput: {
+    borderWidth: 1,
+    borderColor: 'black',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+
+  tabContainer: { flexDirection: 'row', marginBottom: 12, justifyContent: 'space-around' },
+
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#eee',
+  },
+  activeTab: {
+    backgroundColor: 'blue',
+  },
+
+  tabText: {
+    color: '#444',
+    fontWeight: '600',
+  },
+  activeTabText: {
+    color: 'white',
+  },
+
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    alignItems: 'center',
+  },
+  image: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+  },
+  title: {
     fontWeight: 'bold',
     fontSize: 16,
   },
-  searchInput: {
-    backgroundColor: '#f0f0f0',
+  categoryText: {
+    color: 'gray',
+    fontSize: 14,
+  },
+  price: {
+    marginTop: 6,
+    fontWeight: '600',
+    color: 'black',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+  },
+  button: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 10,
+    marginLeft: 6,
   },
-  tabContainer: { flexDirection: 'row', marginBottom: 8 },
-  tabText: {
-    marginRight: 16,
-    fontSize: 16,
-    color: '#888',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 20,
+  editButton: {
+    backgroundColor: 'orange',
   },
-  activeTab: {
-    backgroundColor: '#4e7fff',
-    color: '#fff',
+  deleteButton: {
+    backgroundColor: 'red',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
